@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Technique Studio</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🎬 TECHNIQUE STUDIO</div>
+    <div class="preset-switcher">
+      <span id="preset-name">Viral Grammar</span>
+    </div>
+    <label class="upload-btn">
+      + 영상 추가
+      <input id="file-input" type="file" accept="video/mp4" hidden />
+    </label>
+  </header>
+
+  <main class="layout">
+    <aside class="library" id="library">
+      <div class="library-header">라이브러리</div>
+      <div id="library-list" class="library-list"></div>
+    </aside>
+
+    <section class="viewer">
+      <div class="player-wrap">
+        <video id="player" controls></video>
+        <div id="player-empty" class="empty-state">왼쪽에서 영상을 선택하거나 업로드하세요</div>
+      </div>
+      <div class="timeline" id="timeline"></div>
+    </section>
+
+    <aside class="analysis" id="analysis">
+      <div class="analysis-header">분석 패널</div>
+      <div id="analysis-body" class="empty-state">장면을 선택하면 분석 결과가 표시됩니다</div>
+    </aside>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

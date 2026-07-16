@@ -1,0 +1,18 @@
+{
+  "id": "viral_grammar",
+  "name": "Viral Grammar",
+  "description": "트렌딩 쇼츠의 편집 리듬과 훅 구조를 분석하는 프리셋",
+  "scene_fields": [
+    { "key": "cut_count", "label": "장면 내 컷 수", "type": "number", "auto": true },
+    { "key": "duration_ms", "label": "장면 길이(ms)", "type": "number", "auto": true },
+    { "key": "palette", "label": "컬러 팔레트", "type": "color_list", "auto": true },
+    { "key": "hook_type", "label": "훅 유형", "type": "tag_select", "auto": false,
+      "options": ["얼굴 클로즈업", "텍스트 임팩트", "움직임/액션", "반전/서프라이즈", "제품/결과물 노출"] },
+    { "key": "audio_sync", "label": "오디오 싱크 점수", "type": "number", "auto": true }
+  ],
+  "video_fields": [
+    { "key": "avg_shot_length_ms", "label": "평균 샷 길이", "type": "number", "auto": true },
+    { "key": "cuts_per_10s", "label": "컷 빈도 (10초당)", "type": "number", "auto": true },
+    { "key": "first_second_motion", "label": "첫 1초 움직임량", "type": "number", "auto": false }
+  ]
+}
