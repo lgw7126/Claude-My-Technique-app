@@ -391,6 +391,161 @@
     text-align: right;
   }
 
+  /* ── trending modal ──────────────────────── */
+  .trend-btn {
+    background: none;
+    border: 1px solid var(--gold-deep);
+    color: var(--gold);
+    font-weight: 800;
+    font-size: 13px;
+    border-radius: 7px;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .trend-btn:hover { background: rgba(242, 193, 78, 0.1); }
+  .trend-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  .modal-wrap {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 6, 10, 0.72);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    padding: 24px;
+  }
+  .modal-wrap.open { display: flex; }
+  .modal {
+    width: min(700px, 100%);
+    max-height: 86vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .modal-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .modal-title {
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--gold);
+  }
+  .modal-close {
+    margin-left: auto;
+    background: none;
+    border: 0;
+    color: var(--dim);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 6px;
+  }
+  .modal-close:hover { color: var(--ink); }
+  .modal-close:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .modal-body { overflow-y: auto; padding: 14px 16px 18px; }
+
+  .key-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .key-input {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--ink);
+    font: inherit;
+    font-size: 12px;
+    padding: 7px 9px;
+    font-family: var(--mono);
+  }
+  .key-input::placeholder { color: var(--dim); font-family: inherit; }
+  .key-input:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+
+  .guide { margin: 4px 0 10px; }
+  .guide summary {
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--gold);
+    font-weight: 700;
+  }
+  .guide ol {
+    margin: 8px 0 0;
+    padding-left: 20px;
+    font-size: 12px;
+    color: var(--dim);
+    line-height: 2;
+  }
+  .guide a { color: var(--gold); }
+
+  .trend-note { font-size: 11px; color: var(--dim); line-height: 1.7; margin-bottom: 6px; }
+
+  .trend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .trend-rank {
+    flex: 0 0 22px;
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--gold);
+    font-weight: 700;
+  }
+  .trend-thumb {
+    flex: 0 0 auto;
+    width: 94px;
+    height: 53px;
+    object-fit: cover;
+    border-radius: 6px;
+    background: #000;
+    border: 1px solid var(--line);
+  }
+  .trend-meta { flex: 1; min-width: 0; }
+  .trend-title {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .trend-sub {
+    margin-top: 3px;
+    font-size: 11px;
+    color: var(--dim);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .trend-open {
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gold);
+    text-decoration: none;
+    border: 1px solid var(--gold-deep);
+    border-radius: 6px;
+    padding: 5px 10px;
+  }
+  .trend-open:hover { background: rgba(242, 193, 78, 0.1); }
+  .trend-open:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
   /* ── responsive ──────────────────────────── */
   @media (max-width: 960px) {
     body { overflow: auto; height: auto; }
@@ -408,9 +563,44 @@
 <header class="topbar">
   <div class="brand"><span class="clap">▚</span>TECHNIQUE STUDIO</div>
   <div class="preset-chip">VIRAL GRAMMAR</div>
+  <button class="trend-btn" id="trend-btn">🔥 트렌딩</button>
   <button class="add-btn" id="add-btn">+ 영상 추가</button>
   <input type="file" id="file-input" accept="video/mp4,video/webm,video/quicktime" hidden>
 </header>
+
+<div class="modal-wrap" id="trend-modal" role="dialog" aria-modal="true" aria-label="트렌딩 쇼츠">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">🔥 지금 뜨는 쇼츠</div>
+      <select class="lib-sort" id="trend-region" aria-label="국가">
+        <option value="KR">한국</option>
+        <option value="US">미국</option>
+        <option value="JP">일본</option>
+        <option value="GB">영국</option>
+      </select>
+      <button class="ghost-btn" id="trend-refresh" style="flex:0 0 auto">새로고침</button>
+      <button class="modal-close" id="trend-close" aria-label="닫기">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="key-row">
+        <input class="key-input" id="yt-key" placeholder="YouTube API 키를 붙여넣으세요 (무료)" autocomplete="off">
+        <button class="ghost-btn" id="yt-key-save" style="flex:0 0 auto">저장</button>
+      </div>
+      <details class="guide" id="key-guide">
+        <summary>API 키 무료 발급 방법 (처음 한 번, 약 5분)</summary>
+        <ol>
+          <li><a href="https://console.cloud.google.com" target="_blank" rel="noopener">console.cloud.google.com</a>에 구글 계정으로 로그인</li>
+          <li>상단의 프로젝트 선택 → <b>새 프로젝트</b> → 이름은 아무거나 → 만들기</li>
+          <li>왼쪽 메뉴 <b>API 및 서비스 → 라이브러리</b> → "YouTube Data API v3" 검색 → <b>사용</b> 버튼</li>
+          <li><b>API 및 서비스 → 사용자 인증 정보</b> → 사용자 인증 정보 만들기 → <b>API 키</b></li>
+          <li>만들어진 키를 복사해서 위 칸에 붙여넣고 저장 — 키는 이 브라우저에만 저장됩니다</li>
+        </ol>
+      </details>
+      <div class="trend-note" id="trend-note"></div>
+      <div id="trend-list"></div>
+    </div>
+  </div>
+</div>
 
 <main class="layout">
   <aside class="pane library">
@@ -840,6 +1030,10 @@ function fmt(ms) {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
 
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
 function showProgress(label, pct) {
   progressEl.style.display = "block";
   progressLabel.textContent = label;
@@ -900,8 +1094,6 @@ function renderInsights() {
   }
   const ranked = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
   const maxTag = ranked.length ? ranked[0][1] : 1;
-
-  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   cardsEl.innerHTML = `
     <div class="card">
@@ -1165,6 +1357,123 @@ deepBtn.addEventListener("click", async () => {
     state.analyzing = false;
   }
 });
+
+/* ═══════════════ trending shorts (YouTube Data API) ═══════════════ */
+
+const YT_KEY_STORE = "technique_studio_yt_key";
+const YT_REGION_STORE = "technique_studio_yt_region";
+const SHORTS_MAX_S = 181;   // 쇼츠 기준: 3분 이하
+
+function isoDurToSeconds(iso) {
+  const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || "");
+  if (!m) return 0;
+  return (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0);
+}
+
+function fmtViews(n) {
+  n = +n || 0;
+  if (n >= 1e8) return (n / 1e8).toFixed(1).replace(/\.0$/, "") + "억";
+  if (n >= 1e6) return Math.round(n / 1e4).toLocaleString() + "만";
+  if (n >= 1e4) return (n / 1e4).toFixed(1).replace(/\.0$/, "") + "만";
+  return n.toLocaleString();
+}
+
+const trendModal = $("trend-modal"), trendList = $("trend-list"), trendNote = $("trend-note");
+const ytKeyInput = $("yt-key"), trendRegion = $("trend-region");
+
+function openTrending() {
+  trendModal.classList.add("open");
+  const key = localStorage.getItem(YT_KEY_STORE) || "";
+  ytKeyInput.value = key;
+  trendRegion.value = localStorage.getItem(YT_REGION_STORE) || "KR";
+  if (key) {
+    $("key-guide").open = false;
+    loadTrending();
+  } else {
+    $("key-guide").open = true;
+    trendNote.textContent = "API 키를 저장하면 지금 뜨는 쇼츠 목록이 자동으로 나타납니다.";
+  }
+}
+
+function closeTrending() { trendModal.classList.remove("open"); }
+
+async function loadTrending() {
+  const key = localStorage.getItem(YT_KEY_STORE);
+  if (!key) { trendNote.textContent = "먼저 API 키를 저장해 주세요."; return; }
+  const region = trendRegion.value;
+  localStorage.setItem(YT_REGION_STORE, region);
+  trendList.innerHTML = "";
+  trendNote.textContent = "트렌딩 목록을 불러오는 중…";
+
+  let data;
+  try {
+    const url = "https://www.googleapis.com/youtube/v3/videos"
+      + "?part=snippet,contentDetails,statistics&chart=mostPopular"
+      + "&regionCode=" + encodeURIComponent(region)
+      + "&maxResults=50&key=" + encodeURIComponent(key);
+    const res = await fetch(url);
+    data = await res.json();
+    if (!res.ok) {
+      const msg = data && data.error && data.error.message || res.status;
+      trendNote.textContent = /key|credential|permission/i.test(String(msg))
+        ? "API 키가 올바르지 않거나 YouTube Data API v3가 아직 '사용' 설정되지 않았습니다. 발급 방법 3번 단계를 확인해 주세요."
+        : "불러오기 실패: " + msg;
+      return;
+    }
+  } catch (err) {
+    trendNote.textContent = location.protocol === "file:"
+      ? "네트워크에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요."
+      : "이 페이지(아티팩트)에서는 보안 정책상 외부 접속이 차단됩니다. index.html 파일을 저장해서 열면 트렌딩 수집이 동작합니다.";
+    return;
+  }
+
+  const items = (data.items || [])
+    .filter((v) => {
+      const s = isoDurToSeconds(v.contentDetails && v.contentDetails.duration);
+      return s > 0 && s <= SHORTS_MAX_S;
+    })
+    .slice(0, 30);
+
+  if (!items.length) {
+    trendNote.textContent = "지금 트렌딩 차트에 3분 이하 쇼츠가 없습니다. 다른 국가를 선택해 보세요.";
+    return;
+  }
+
+  trendNote.textContent = `트렌딩 차트에서 쇼츠 ${items.length}개를 찾았습니다. `
+    + "'열기'로 확인하고, 분석할 영상은 mp4 파일로 저장한 뒤 '+ 영상 추가'로 넣어주세요.";
+
+  trendList.innerHTML = items.map((v, i) => {
+    const sn = v.snippet || {};
+    const thumb = sn.thumbnails && (sn.thumbnails.medium || sn.thumbnails.default);
+    const secs = isoDurToSeconds(v.contentDetails.duration);
+    const views = fmtViews(v.statistics && v.statistics.viewCount);
+    return `
+      <div class="trend-item">
+        <span class="trend-rank">${i + 1}</span>
+        ${thumb ? `<img class="trend-thumb" src="${esc(thumb.url)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '<div class="trend-thumb"></div>'}
+        <div class="trend-meta">
+          <div class="trend-title">${esc(sn.title || "")}</div>
+          <div class="trend-sub">${esc(sn.channelTitle || "")} · 조회 ${views} · ${fmt(secs * 1000)}</div>
+        </div>
+        <a class="trend-open" href="https://www.youtube.com/watch?v=${esc(v.id)}" target="_blank" rel="noopener">열기 ↗</a>
+      </div>`;
+  }).join("");
+}
+
+$("trend-btn").addEventListener("click", openTrending);
+$("trend-close").addEventListener("click", closeTrending);
+trendModal.addEventListener("click", (e) => { if (e.target === trendModal) closeTrending(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTrending(); });
+$("yt-key-save").addEventListener("click", () => {
+  const key = ytKeyInput.value.trim();
+  if (!key) { trendNote.textContent = "키를 붙여넣은 뒤 저장을 눌러주세요."; return; }
+  localStorage.setItem(YT_KEY_STORE, key);
+  $("key-guide").open = false;
+  loadTrending();
+});
+ytKeyInput.addEventListener("keydown", (e) => { if (e.key === "Enter") $("yt-key-save").click(); });
+$("trend-refresh").addEventListener("click", loadTrending);
+trendRegion.addEventListener("change", loadTrending);
 
 renderLibrary();
 renderInsights();
