@@ -1,0 +1,1171 @@
+<title>Technique Studio</title>
+<style>
+  :root {
+    --bg: #0c0d12;
+    --panel: #14161f;
+    --panel-2: #1a1d2a;
+    --line: #272b3a;
+    --ink: #eceef6;
+    --dim: #8d92a5;
+    --gold: #f2c14e;
+    --gold-deep: #c79a2e;
+    --danger: #e05d5d;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", "Segoe UI", sans-serif;
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── top bar ─────────────────────────────── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 18px;
+    height: 52px;
+    flex: 0 0 auto;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand {
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.18em;
+  }
+  .brand .clap { color: var(--gold); margin-right: 6px; }
+  .preset-chip {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--gold);
+    border: 1px solid var(--gold-deep);
+    border-radius: 999px;
+    padding: 4px 12px;
+    background: rgba(242, 193, 78, 0.08);
+  }
+  .add-btn {
+    background: var(--gold);
+    color: #1a1405;
+    font-weight: 800;
+    font-size: 13px;
+    border: 0;
+    border-radius: 7px;
+    padding: 8px 16px;
+    cursor: pointer;
+  }
+  .add-btn:hover { background: #ffd066; }
+  .add-btn:focus-visible, .chip:focus-visible, .scene:focus-visible,
+  .deep-btn:focus-visible, .lib-item:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  /* ── layout ──────────────────────────────── */
+  .layout {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 272px minmax(0, 1fr) 336px;
+    min-height: 0;
+  }
+  .pane { background: var(--panel); overflow-y: auto; min-height: 0; }
+  .pane.library { border-right: 1px solid var(--line); }
+  .pane.analysis { border-left: 1px solid var(--line); }
+
+  .pane-title {
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+    padding: 12px 14px 10px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    color: var(--dim);
+    border-bottom: 1px solid var(--line);
+    z-index: 2;
+  }
+  .pane-title .count { color: var(--gold); margin-left: 6px; }
+
+  /* ── library tools ───────────────────────── */
+  .lib-tools {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 37px;
+    background: var(--panel);
+    z-index: 1;
+  }
+  .lib-search, .lib-sort {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--ink);
+    font: inherit;
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+  .lib-search { flex: 1; min-width: 0; }
+  .lib-search::placeholder { color: var(--dim); }
+  .lib-sort { flex: 0 0 auto; cursor: pointer; }
+  .lib-search:focus-visible, .lib-sort:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 1px;
+  }
+
+  .lib-footer {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--line);
+  }
+  .ghost-btn {
+    flex: 1;
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--dim);
+    border-radius: 6px;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 7px 8px;
+    cursor: pointer;
+  }
+  .ghost-btn:hover { color: var(--gold); border-color: var(--gold-deep); }
+  .ghost-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* ── library ─────────────────────────────── */
+  .lib-item {
+    width: 100%;
+    text-align: left;
+    display: flex;
+    gap: 10px;
+    padding: 10px 12px;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .lib-item:hover, .lib-item.active { background: var(--panel-2); }
+  .lib-thumb {
+    flex: 0 0 auto;
+    width: 56px;
+    height: 56px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: #000;
+    border: 1px solid var(--line);
+  }
+  .lib-meta { min-width: 0; }
+  .lib-name {
+    font-weight: 700;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .lib-sub {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--dim);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+    margin-top: 5px;
+  }
+
+  /* ── viewer ──────────────────────────────── */
+  .viewer { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .stage {
+    flex: 1;
+    min-height: 0;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .stage video { max-width: 100%; max-height: 100%; }
+  .hint { color: var(--dim); text-align: center; padding: 28px; line-height: 1.8; }
+  .hint strong { color: var(--ink); }
+
+  .progress-wrap {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 10px 16px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.75));
+    display: none;
+  }
+  .progress-label {
+    font-size: 11px;
+    color: var(--gold);
+    font-family: var(--mono);
+    margin-bottom: 6px;
+  }
+  .progress-track { height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; }
+  .progress-fill { height: 100%; width: 0%; background: var(--gold); border-radius: 2px; }
+
+  .strip {
+    flex: 0 0 auto;
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+    padding: 10px 12px 12px;
+  }
+  .strip-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+    font-weight: 800;
+  }
+  .deep-btn {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--dim);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+  .deep-btn:hover { color: var(--gold); border-color: var(--gold-deep); }
+  .deep-btn:disabled { opacity: 0.45; cursor: default; }
+  .scenes { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .scene {
+    flex: 0 0 auto;
+    width: 104px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 0;
+    cursor: pointer;
+    overflow: hidden;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+  }
+  .scene:hover { border-color: var(--dim); }
+  .scene.active { border-color: var(--gold); }
+  .scene img { display: block; width: 100%; height: 58px; object-fit: cover; background: #000; }
+  .scene .cap {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 7px 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .scene .cap b { color: var(--ink); font-weight: 700; }
+
+  /* ── analysis ────────────────────────────── */
+  .cards { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .card {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 12px 13px;
+  }
+  .card .label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.13em;
+    color: var(--dim);
+    margin-bottom: 7px;
+  }
+  .card .value {
+    font-size: 15px;
+    font-weight: 700;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .card .sub { font-size: 11px; color: var(--dim); margin-top: 4px; line-height: 1.6; }
+  .stat-row { display: flex; gap: 10px; }
+  .stat-row .card { flex: 1; }
+
+  .swatches { display: flex; gap: 6px; }
+  .swatch {
+    width: 30px; height: 30px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .swatch-hex {
+    display: flex; gap: 6px; margin-top: 6px;
+    font-family: var(--mono); font-size: 9px; color: var(--dim);
+  }
+  .swatch-hex span { width: 30px; overflow: hidden; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--dim);
+    border-radius: 999px;
+    padding: 4px 11px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .chip:hover { color: var(--ink); border-color: var(--dim); }
+  .chip.on {
+    color: var(--gold);
+    border-color: var(--gold-deep);
+    background: rgba(242, 193, 78, 0.1);
+  }
+  .tag-input {
+    width: 100%;
+    margin-top: 8px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--ink);
+    font: inherit;
+    font-size: 12px;
+    padding: 7px 9px;
+  }
+  .tag-input::placeholder { color: var(--dim); }
+
+  .del-btn {
+    background: none;
+    border: 0;
+    color: var(--dim);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 6px 0 2px;
+    font-family: inherit;
+  }
+  .del-btn:hover { color: var(--danger); }
+
+  .empty { color: var(--dim); text-align: center; padding: 26px 16px; line-height: 1.8; font-size: 12px; }
+
+  /* ── insights ────────────────────────────── */
+  .insight-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 7px;
+    font-size: 11px;
+  }
+  .insight-row .bar-label { flex: 0 0 84px; color: var(--dim); }
+  .insight-row .bar-track {
+    flex: 1;
+    height: 8px;
+    background: var(--bg);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .insight-row .bar-fill { height: 100%; background: var(--gold); border-radius: 4px; }
+  .insight-row .bar-num {
+    flex: 0 0 auto;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    min-width: 22px;
+    text-align: right;
+  }
+
+  /* ── responsive ──────────────────────────── */
+  @media (max-width: 960px) {
+    body { overflow: auto; height: auto; }
+    .layout { grid-template-columns: 1fr; }
+    .pane.library { border-right: 0; border-bottom: 1px solid var(--line); max-height: 240px; }
+    .pane.analysis { border-left: 0; border-top: 1px solid var(--line); }
+    .stage { min-height: 260px; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .progress-fill { transition: width 0.15s ease; }
+  }
+</style>
+
+<header class="topbar">
+  <div class="brand"><span class="clap">▚</span>TECHNIQUE STUDIO</div>
+  <div class="preset-chip">VIRAL GRAMMAR</div>
+  <button class="add-btn" id="add-btn">+ 영상 추가</button>
+  <input type="file" id="file-input" accept="video/mp4,video/webm,video/quicktime" hidden>
+</header>
+
+<main class="layout">
+  <aside class="pane library">
+    <div class="pane-title">라이브러리<span class="count" id="lib-count"></span></div>
+    <div class="lib-tools">
+      <input class="lib-search" id="lib-search" placeholder="이름·태그 검색" aria-label="라이브러리 검색">
+      <select class="lib-sort" id="lib-sort" aria-label="정렬">
+        <option value="recent">최신순</option>
+        <option value="cuts">컷 빈도순</option>
+        <option value="duration">길이순</option>
+        <option value="name">이름순</option>
+      </select>
+    </div>
+    <div id="lib-list"></div>
+    <div class="lib-footer">
+      <button class="ghost-btn" id="export-btn">↓ 내보내기</button>
+      <button class="ghost-btn" id="import-btn">↑ 가져오기</button>
+      <input type="file" id="import-input" accept="application/json,.json" hidden>
+    </div>
+  </aside>
+
+  <section class="viewer">
+    <div class="stage">
+      <video id="player" controls playsinline style="display:none"></video>
+      <div class="hint" id="stage-hint">
+        <strong>+ 영상 추가</strong>를 눌러 쇼츠 mp4 파일을 선택하세요<br>
+        브라우저 안에서 바로 장면 분할·팔레트 분석이 실행됩니다<br>
+        (영상은 어디에도 업로드되지 않습니다)
+      </div>
+      <div class="progress-wrap" id="progress">
+        <div class="progress-label" id="progress-label">분석 중…</div>
+        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+    </div>
+    <div class="strip">
+      <div class="strip-head">
+        <span id="strip-title">장면 타임라인</span>
+        <button class="deep-btn" id="deep-btn" disabled>⚡ 정밀 컷 분석</button>
+      </div>
+      <div class="scenes" id="scenes"></div>
+    </div>
+  </section>
+
+  <aside class="pane analysis">
+    <div class="pane-title">분석 패널</div>
+    <div class="cards" id="cards">
+      <div class="empty">장면을 선택하면<br>분석 결과가 표시됩니다</div>
+    </div>
+  </aside>
+</main>
+
+<script>
+"use strict";
+
+/* ═══════════════ MP4 box parser (keyframe scene split) ═══════════════ */
+
+function parseMp4(buffer) {
+  const view = new DataView(buffer);
+  const size = buffer.byteLength;
+  const td = new TextDecoder("latin1");
+  const CONTAINERS = new Set(["moov", "trak", "mdia", "minf", "stbl", "edts"]);
+  const out = { durationS: null, tracks: [] };
+  let current = null;
+
+  function readType(pos) {
+    return td.decode(new Uint8Array(buffer, pos, 4));
+  }
+
+  function walk(start, end) {
+    let pos = start;
+    while (pos + 8 <= end) {
+      let boxSize = view.getUint32(pos);
+      const type = readType(pos + 4);
+      let headerSize = 8;
+      if (boxSize === 1) {
+        boxSize = Number(view.getBigUint64(pos + 8));
+        headerSize = 16;
+      } else if (boxSize === 0) {
+        boxSize = end - pos;
+      }
+      if (boxSize < headerSize) return;
+      const bodyStart = pos + headerSize;
+      const bodyEnd = Math.min(pos + boxSize, end);
+
+      if (type === "mvhd") {
+        const ver = view.getUint8(bodyStart);
+        if (ver === 1) {
+          const ts = view.getUint32(bodyStart + 20);
+          const dur = Number(view.getBigUint64(bodyStart + 24));
+          out.durationS = ts ? dur / ts : null;
+        } else {
+          const ts = view.getUint32(bodyStart + 12);
+          const dur = view.getUint32(bodyStart + 16);
+          out.durationS = ts ? dur / ts : null;
+        }
+      } else if (type === "trak") {
+        current = { keyframes: [], sttsEntries: [], samples: 0 };
+        out.tracks.push(current);
+      } else if (type === "tkhd" && current) {
+        current.width = view.getUint32(bodyEnd - 8) / 65536;
+        current.height = view.getUint32(bodyEnd - 4) / 65536;
+      } else if (type === "hdlr" && current) {
+        current.type = readType(bodyStart + 8);
+      } else if (type === "mdhd" && current) {
+        const ver = view.getUint8(bodyStart);
+        current.timescale = ver === 1
+          ? view.getUint32(bodyStart + 20)
+          : view.getUint32(bodyStart + 12);
+      } else if (type === "stts" && current) {
+        const n = view.getUint32(bodyStart + 4);
+        for (let i = 0; i < n; i++) {
+          const count = view.getUint32(bodyStart + 8 + i * 8);
+          const delta = view.getUint32(bodyStart + 12 + i * 8);
+          current.sttsEntries.push([count, delta]);
+          current.samples += count;
+        }
+      } else if (type === "stss" && current) {
+        const n = view.getUint32(bodyStart + 4);
+        for (let i = 0; i < n; i++) {
+          current.keyframes.push(view.getUint32(bodyStart + 8 + i * 4));
+        }
+      }
+
+      if (CONTAINERS.has(type)) walk(bodyStart, bodyEnd);
+      pos += boxSize;
+    }
+  }
+
+  walk(0, size);
+  return out;
+}
+
+function sampleToSeconds(sttsEntries, timescale, sampleId) {
+  let remaining = sampleId - 1;
+  let ticks = 0;
+  for (const [count, delta] of sttsEntries) {
+    if (remaining < count) return (ticks + remaining * delta) / timescale;
+    remaining -= count;
+    ticks += count * delta;
+  }
+  return ticks / timescale;
+}
+
+function keyframeScenes(mp4) {
+  const vt = mp4.tracks.find((t) => t.type === "vide");
+  if (!vt || !vt.keyframes.length || !vt.timescale) return null;
+  const bounds = [...vt.keyframes, vt.samples + 1];
+  const scenes = [];
+  for (let i = 0; i < vt.keyframes.length; i++) {
+    scenes.push({
+      startMs: Math.round(sampleToSeconds(vt.sttsEntries, vt.timescale, bounds[i]) * 1000),
+      endMs: Math.round(sampleToSeconds(vt.sttsEntries, vt.timescale, bounds[i + 1]) * 1000),
+    });
+  }
+  return scenes;
+}
+
+/* ═══════════════ frame capture + palette ═══════════════ */
+
+function seekTo(video, seconds) {
+  return new Promise((resolve) => {
+    const target = Math.max(0.05, Math.min(seconds, (video.duration || seconds) - 0.05));
+    if (Math.abs(video.currentTime - target) < 0.01) return resolve();
+    const done = () => { video.removeEventListener("seeked", done); requestAnimationFrame(resolve); };
+    video.addEventListener("seeked", done);
+    video.currentTime = target;
+  });
+}
+
+function grabFrame(video, width) {
+  const scale = width / video.videoWidth;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return { canvas, ctx };
+}
+
+function extractPalette(ctx, w, h, k = 5) {
+  const data = ctx.getImageData(0, 0, w, h).data;
+  const pts = [];
+  for (let i = 0; i < data.length; i += 16) {
+    pts.push([data[i], data[i + 1], data[i + 2]]);
+  }
+  // k-means, initialized by picking spread-out points
+  let centers = [];
+  for (let i = 0; i < k; i++) centers.push(pts[Math.floor((pts.length - 1) * i / (k - 1))].slice());
+  for (let iter = 0; iter < 6; iter++) {
+    const sums = centers.map(() => [0, 0, 0, 0]);
+    for (const p of pts) {
+      let best = 0, bestD = Infinity;
+      for (let c = 0; c < k; c++) {
+        const d = (p[0] - centers[c][0]) ** 2 + (p[1] - centers[c][1]) ** 2 + (p[2] - centers[c][2]) ** 2;
+        if (d < bestD) { bestD = d; best = c; }
+      }
+      sums[best][0] += p[0]; sums[best][1] += p[1]; sums[best][2] += p[2]; sums[best][3]++;
+    }
+    for (let c = 0; c < k; c++) {
+      if (sums[c][3]) {
+        centers[c] = [sums[c][0] / sums[c][3], sums[c][1] / sums[c][3], sums[c][2] / sums[c][3]];
+        centers[c].count = sums[c][3];
+      }
+    }
+  }
+  centers.sort((a, b) => (b.count || 0) - (a.count || 0));
+  return centers.map((c) =>
+    "#" + c.slice(0, 3).map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")
+  );
+}
+
+function lumaGrid(ctx, w, h) {
+  const data = ctx.getImageData(0, 0, w, h).data;
+  const grid = new Float32Array(w * h);
+  for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+    grid[j] = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+  }
+  return grid;
+}
+
+function gridDiff(a, b) {
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) sum += Math.abs(a[i] - b[i]);
+  return sum / a.length;
+}
+
+/* ═══════════════ analysis pipeline ═══════════════ */
+
+const GRID_W = 32, GRID_H = 18;
+
+async function analyzeFile(file, onProgress) {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.muted = true;
+  video.preload = "auto";
+  video.src = url;
+  await new Promise((res, rej) => {
+    video.addEventListener("loadedmetadata", res, { once: true });
+    video.addEventListener("error", () => rej(new Error("이 파일은 브라우저에서 재생할 수 없는 형식입니다")), { once: true });
+  });
+
+  const durationMs = Math.round(video.duration * 1000);
+
+  onProgress("파일 구조 분석 중…", 5);
+  let scenes = null;
+  if (/\.mp4$|\.m4v$|\.mov$/i.test(file.name) || file.type.includes("mp4")) {
+    try {
+      scenes = keyframeScenes(parseMp4(await file.arrayBuffer()));
+    } catch (e) { scenes = null; }
+  }
+  if (!scenes || !scenes.length) {
+    scenes = [];
+    for (let t = 0; t < durationMs; t += 5000) {
+      scenes.push({ startMs: t, endMs: Math.min(t + 5000, durationMs) });
+    }
+  }
+  scenes = scenes.filter((s) => s.endMs - s.startMs > 80);
+
+  // thumbnails + palettes
+  for (let i = 0; i < scenes.length; i++) {
+    const s = scenes[i];
+    onProgress(`장면 ${i + 1}/${scenes.length} 프레임 분석 중…`, 10 + (i / scenes.length) * 70);
+    const mid = (s.startMs + Math.min(400, (s.endMs - s.startMs) / 2)) / 1000;
+    await seekTo(video, mid);
+    const { canvas, ctx } = grabFrame(video, 192);
+    s.thumb = canvas.toDataURL("image/jpeg", 0.62);
+    const small = grabFrame(video, 48);
+    s.palette = extractPalette(small.ctx, small.canvas.width, small.canvas.height);
+  }
+
+  // first-second motion
+  onProgress("첫 1초 훅 분석 중…", 84);
+  await seekTo(video, 0.1);
+  let f0 = grabFrame(video, GRID_W);
+  const g0 = lumaGrid(f0.ctx, GRID_W, f0.canvas.height);
+  const brightness0 = g0.reduce((a, b) => a + b, 0) / g0.length;
+  await seekTo(video, 1.0);
+  let f1 = grabFrame(video, GRID_W);
+  const g1 = lumaGrid(f1.ctx, GRID_W, f1.canvas.height);
+  const motion = g1.length === g0.length ? gridDiff(g0, g1) : 0;
+
+  onProgress("완료", 100);
+  URL.revokeObjectURL(url);
+
+  return {
+    id: Date.now().toString(36),
+    name: file.name,
+    size: file.size,
+    durationMs,
+    width: video.videoWidth,
+    height: video.videoHeight,
+    method: "keyframe",
+    firstSecond: { brightness: Math.round(brightness0), motion: Math.round(motion * 10) / 10 },
+    scenes,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+async function deepScan(file, report, onProgress) {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.muted = true;
+  video.preload = "auto";
+  video.src = url;
+  await new Promise((res) => video.addEventListener("loadedmetadata", res, { once: true }));
+
+  const stepS = 0.34;
+  const durS = video.duration;
+  const diffs = [];
+  let prev = null;
+
+  for (let t = 0.1, i = 0; t < durS; t += stepS, i++) {
+    if (i % 3 === 0) onProgress(`정밀 스캔 ${Math.round((t / durS) * 100)}%…`, (t / durS) * 80);
+    await seekTo(video, t);
+    const { canvas, ctx } = grabFrame(video, GRID_W);
+    const grid = lumaGrid(ctx, GRID_W, canvas.height);
+    if (prev && grid.length === prev.length) diffs.push({ t, d: gridDiff(prev, grid) });
+    prev = grid;
+  }
+
+  const mean = diffs.reduce((a, x) => a + x.d, 0) / (diffs.length || 1);
+  const std = Math.sqrt(diffs.reduce((a, x) => a + (x.d - mean) ** 2, 0) / (diffs.length || 1));
+  const threshold = Math.max(18, mean + 2.2 * std);
+
+  const cuts = [0];
+  for (const { t, d } of diffs) {
+    if (d > threshold && (t - cuts[cuts.length - 1]) * 1000 > 350) cuts.push(t);
+  }
+
+  const durationMs = Math.round(durS * 1000);
+  const scenes = [];
+  for (let i = 0; i < cuts.length; i++) {
+    const startMs = Math.round(cuts[i] * 1000);
+    const endMs = i + 1 < cuts.length ? Math.round(cuts[i + 1] * 1000) : durationMs;
+    if (endMs - startMs > 80) scenes.push({ startMs, endMs });
+  }
+
+  const maxThumbs = 60;
+  for (let i = 0; i < scenes.length; i++) {
+    const s = scenes[i];
+    onProgress(`장면 ${i + 1}/${scenes.length} 프레임 분석 중…`, 80 + (i / scenes.length) * 20);
+    const mid = (s.startMs + Math.min(400, (s.endMs - s.startMs) / 2)) / 1000;
+    await seekTo(video, mid);
+    if (i < maxThumbs) {
+      const { canvas } = grabFrame(video, 192);
+      s.thumb = canvas.toDataURL("image/jpeg", 0.62);
+    }
+    const small = grabFrame(video, 48);
+    s.palette = extractPalette(small.ctx, small.canvas.width, small.canvas.height);
+  }
+
+  URL.revokeObjectURL(url);
+  report.scenes = scenes;
+  report.method = "framediff";
+  return report;
+}
+
+/* ═══════════════ persistence ═══════════════ */
+
+const STORE_KEY = "technique_studio_reports_v1";
+
+function loadReports() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
+  catch (e) { return []; }
+}
+
+function saveReports() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state.reports));
+  } catch (e) {
+    // storage full: drop oldest thumbnails and retry once
+    for (const r of state.reports.slice(0, -1)) {
+      for (const s of r.scenes) delete s.thumb;
+    }
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state.reports)); } catch (e2) {}
+  }
+}
+
+/* ═══════════════ UI state + rendering ═══════════════ */
+
+const HOOK_OPTIONS = ["얼굴 클로즈업", "텍스트 임팩트", "움직임/액션", "반전/서프라이즈", "제품/결과물"];
+
+const state = {
+  reports: loadReports(),
+  activeId: null,
+  activeSceneIdx: null,
+  files: {},        // report id → File (this session only)
+  analyzing: false,
+  query: "",
+  sort: "recent",
+};
+
+const $ = (id) => document.getElementById(id);
+const libList = $("lib-list"), player = $("player"), stageHint = $("stage-hint");
+const scenesEl = $("scenes"), cardsEl = $("cards"), deepBtn = $("deep-btn");
+const progressEl = $("progress"), progressLabel = $("progress-label"), progressFill = $("progress-fill");
+const libCount = $("lib-count");
+
+function cutsPer10s(r) {
+  return r.durationMs ? r.scenes.length / (r.durationMs / 10000) : 0;
+}
+
+function reportTags(r) {
+  const set = new Set();
+  for (const s of r.scenes) for (const t of (s.tags || [])) set.add(t);
+  return [...set];
+}
+
+function visibleReports() {
+  const q = state.query.trim().toLowerCase();
+  let list = state.reports.filter((r) => {
+    if (!q) return true;
+    if (r.name.toLowerCase().includes(q)) return true;
+    return reportTags(r).some((t) => t.toLowerCase().includes(q));
+  });
+  const by = {
+    recent: (a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""),
+    cuts: (a, b) => cutsPer10s(b) - cutsPer10s(a),
+    duration: (a, b) => b.durationMs - a.durationMs,
+    name: (a, b) => a.name.localeCompare(b.name),
+  };
+  return list.sort(by[state.sort] || by.recent);
+}
+
+function fmt(ms) {
+  const total = Math.floor(ms / 1000);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
+function showProgress(label, pct) {
+  progressEl.style.display = "block";
+  progressLabel.textContent = label;
+  progressFill.style.width = pct + "%";
+  if (pct >= 100) setTimeout(() => { progressEl.style.display = "none"; }, 600);
+}
+
+function activeReport() {
+  return state.reports.find((r) => r.id === state.activeId) || null;
+}
+
+function renderLibrary() {
+  libList.innerHTML = "";
+  libCount.textContent = state.reports.length ? ` ${state.reports.length}` : "";
+  if (!state.reports.length) {
+    libList.innerHTML = '<div class="empty">아직 분석한 영상이 없습니다<br>mp4 파일을 추가해 보세요</div>';
+    return;
+  }
+  const list = visibleReports();
+  if (!list.length) {
+    libList.innerHTML = '<div class="empty">검색 결과가 없습니다</div>';
+    return;
+  }
+  for (const r of list) {
+    const btn = document.createElement("button");
+    btn.className = "lib-item" + (r.id === state.activeId ? " active" : "");
+    const thumb = r.scenes.find((s) => s.thumb);
+    const cuts10 = cutsPer10s(r).toFixed(1);
+    btn.innerHTML = `
+      ${thumb ? `<img class="lib-thumb" src="${thumb.thumb}" alt="">` : '<div class="lib-thumb"></div>'}
+      <div class="lib-meta">
+        <div class="lib-name"></div>
+        <div class="lib-sub">${fmt(r.durationMs)} · ${r.scenes.length}장면 · ${cuts10}컷/10s</div>
+        ${state.files[r.id] ? "" : '<span class="badge">재생하려면 파일 다시 추가</span>'}
+      </div>`;
+    btn.querySelector(".lib-name").textContent = r.name;
+    btn.addEventListener("click", () => selectReport(r.id));
+    libList.appendChild(btn);
+  }
+}
+
+function renderInsights() {
+  const reports = state.reports;
+  if (!reports.length) {
+    cardsEl.innerHTML = '<div class="empty">장면을 선택하면<br>분석 결과가 표시됩니다</div>';
+    return;
+  }
+  const avgCuts = reports.reduce((a, r) => a + cutsPer10s(r), 0) / reports.length;
+  const totalScenes = reports.reduce((a, r) => a + r.scenes.length, 0);
+  const shotLengths = [];
+  for (const r of reports) for (const s of r.scenes) shotLengths.push(s.endMs - s.startMs);
+  const avgShot = shotLengths.length ? shotLengths.reduce((a, b) => a + b, 0) / shotLengths.length : 0;
+
+  // hook tag distribution across the whole library
+  const tagCounts = {};
+  for (const r of reports) for (const s of r.scenes) for (const t of (s.tags || [])) {
+    tagCounts[t] = (tagCounts[t] || 0) + 1;
+  }
+  const ranked = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const maxTag = ranked.length ? ranked[0][1] : 1;
+
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  cardsEl.innerHTML = `
+    <div class="card">
+      <div class="label">라이브러리 인사이트</div>
+      <div class="value">${reports.length}개 영상 · ${totalScenes}장면</div>
+      <div class="sub">전체 레퍼런스의 편집 문법 요약</div>
+    </div>
+    <div class="stat-row">
+      <div class="card"><div class="label">평균 컷 빈도</div><div class="value">${avgCuts.toFixed(1)}<span style="font-size:11px;color:var(--dim)"> /10s</span></div></div>
+      <div class="card"><div class="label">평균 샷 길이</div><div class="value">${(avgShot / 1000).toFixed(1)}s</div></div>
+    </div>
+    <div class="card">
+      <div class="label">훅 유형 분포</div>
+      ${ranked.length
+        ? ranked.map(([t, n]) => `
+          <div class="insight-row">
+            <span class="bar-label">${esc(t)}</span>
+            <span class="bar-track"><span class="bar-fill" style="width:${Math.round((n / maxTag) * 100)}%"></span></span>
+            <span class="bar-num">${n}</span>
+          </div>`).join("")
+        : '<div class="sub">아직 태그가 없습니다. 장면을 선택해 훅 유형을 표시해 보세요.</div>'}
+    </div>
+    <div class="card">
+      <div class="label">영상 선택</div>
+      <div class="sub">왼쪽 라이브러리에서 영상을 클릭하면 개별 분석을 볼 수 있습니다</div>
+    </div>`;
+}
+
+function selectReport(id) {
+  state.activeId = id;
+  state.activeSceneIdx = null;
+  const report = activeReport();
+  const file = state.files[id];
+
+  if (file) {
+    player.src = URL.createObjectURL(file);
+    player.style.display = "block";
+    stageHint.style.display = "none";
+  } else {
+    player.removeAttribute("src");
+    player.style.display = "none";
+    stageHint.style.display = "block";
+    stageHint.innerHTML = "분석 리포트만 저장되어 있습니다<br>영상을 다시 재생하려면 <strong>+ 영상 추가</strong>로 같은 파일을 선택하세요";
+  }
+
+  deepBtn.disabled = !file || report.method === "framediff";
+  renderLibrary();
+  renderScenes();
+  renderVideoCards();
+}
+
+function renderScenes() {
+  const report = activeReport();
+  scenesEl.innerHTML = "";
+  if (!report) return;
+  $("strip-title").textContent =
+    `장면 타임라인 · ${report.scenes.length}개 (${report.method === "framediff" ? "정밀 컷 감지" : "키프레임 기준"})`;
+  report.scenes.forEach((s, i) => {
+    const btn = document.createElement("button");
+    btn.className = "scene" + (i === state.activeSceneIdx ? " active" : "");
+    btn.innerHTML = `
+      ${s.thumb ? `<img src="${s.thumb}" alt="장면 ${i + 1}">` : ""}
+      <div class="cap"><b>#${i + 1}</b><span>${fmt(s.startMs)}</span></div>`;
+    btn.addEventListener("click", () => selectScene(i));
+    scenesEl.appendChild(btn);
+  });
+}
+
+function renderVideoCards() {
+  const report = activeReport();
+  if (!report) return;
+  const avgShot = report.scenes.length
+    ? Math.round(report.scenes.reduce((a, s) => a + (s.endMs - s.startMs), 0) / report.scenes.length)
+    : 0;
+  const cuts10 = (report.scenes.length / (report.durationMs / 10000)).toFixed(1);
+  cardsEl.innerHTML = `
+    <div class="card">
+      <div class="label">영상 개요</div>
+      <div class="value">${fmt(report.durationMs)} · ${report.width}×${report.height}</div>
+      <div class="sub">${report.name}</div>
+    </div>
+    <div class="stat-row">
+      <div class="card"><div class="label">컷 빈도</div><div class="value">${cuts10}<span style="font-size:11px;color:var(--dim)"> /10s</span></div></div>
+      <div class="card"><div class="label">평균 샷 길이</div><div class="value">${(avgShot / 1000).toFixed(1)}s</div></div>
+    </div>
+    <div class="card">
+      <div class="label">첫 1초 훅</div>
+      <div class="value">움직임 ${report.firstSecond ? report.firstSecond.motion : "-"}</div>
+      <div class="sub">0→1초 프레임 변화량 (높을수록 역동적인 오프닝) · 평균 밝기 ${report.firstSecond ? report.firstSecond.brightness : "-"}/255</div>
+    </div>
+    <div class="card">
+      <div class="label">장면 선택</div>
+      <div class="sub">아래 타임라인에서 장면을 클릭하면 장면별 팔레트·태그를 볼 수 있습니다</div>
+    </div>
+    <button class="del-btn" id="del-btn">이 리포트 삭제</button>`;
+  $("del-btn").addEventListener("click", deleteActive);
+}
+
+function selectScene(idx) {
+  state.activeSceneIdx = idx;
+  const report = activeReport();
+  const s = report.scenes[idx];
+  if (player.src && player.style.display !== "none") {
+    player.currentTime = s.startMs / 1000;
+    player.play().catch(() => {});
+  }
+  renderScenes();
+
+  const tags = s.tags || [];
+  cardsEl.innerHTML = `
+    <div class="card">
+      <div class="label">장면 #${idx + 1}</div>
+      <div class="value">${fmt(s.startMs)} – ${fmt(s.endMs)}</div>
+      <div class="sub">${((s.endMs - s.startMs) / 1000).toFixed(2)}초</div>
+    </div>
+    <div class="card">
+      <div class="label">컬러 팔레트</div>
+      ${s.palette ? `
+        <div class="swatches">${s.palette.map((h) => `<div class="swatch" style="background:${h}"></div>`).join("")}</div>
+        <div class="swatch-hex">${s.palette.map((h) => `<span>${h}</span>`).join("")}</div>`
+        : '<div class="sub">팔레트 없음</div>'}
+    </div>
+    <div class="card">
+      <div class="label">훅 유형 태그</div>
+      <div class="chips" id="chips">
+        ${HOOK_OPTIONS.map((o) => `<button class="chip${tags.includes(o) ? " on" : ""}" data-tag="${o}">${o}</button>`).join("")}
+        ${tags.filter((t) => !HOOK_OPTIONS.includes(t)).map((t) => `<button class="chip on" data-tag="${t}">${t}</button>`).join("")}
+      </div>
+      <input class="tag-input" id="tag-input" placeholder="직접 입력 후 Enter">
+    </div>
+    <button class="del-btn" id="back-btn">← 영상 전체 보기</button>`;
+
+  $("chips").addEventListener("click", (e) => {
+    const tag = e.target.dataset && e.target.dataset.tag;
+    if (!tag) return;
+    s.tags = s.tags || [];
+    const at = s.tags.indexOf(tag);
+    if (at >= 0) s.tags.splice(at, 1); else s.tags.push(tag);
+    saveReports();
+    selectScene(idx);
+  });
+  $("tag-input").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || !e.target.value.trim()) return;
+    s.tags = s.tags || [];
+    s.tags.push(e.target.value.trim());
+    saveReports();
+    selectScene(idx);
+  });
+  $("back-btn").addEventListener("click", () => { state.activeSceneIdx = null; renderScenes(); renderVideoCards(); });
+}
+
+function deleteActive() {
+  const i = state.reports.findIndex((r) => r.id === state.activeId);
+  if (i >= 0) state.reports.splice(i, 1);
+  state.activeId = null;
+  saveReports();
+  renderLibrary();
+  scenesEl.innerHTML = "";
+  $("strip-title").textContent = "장면 타임라인";
+  deepBtn.disabled = true;
+  player.style.display = "none";
+  stageHint.style.display = "block";
+  stageHint.innerHTML = '<strong>+ 영상 추가</strong>를 눌러 쇼츠 mp4 파일을 선택하세요';
+  renderInsights();
+}
+
+/* ═══════════════ events ═══════════════ */
+
+$("add-btn").addEventListener("click", () => $("file-input").click());
+
+$("file-input").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file || state.analyzing) return;
+
+  // re-attaching a file for an existing report?
+  const existing = state.reports.find((r) => r.name === file.name && r.size === file.size);
+  if (existing) {
+    state.files[existing.id] = file;
+    selectReport(existing.id);
+    return;
+  }
+
+  state.analyzing = true;
+  try {
+    const report = await analyzeFile(file, showProgress);
+    state.files[report.id] = file;
+    state.reports.push(report);
+    saveReports();
+    selectReport(report.id);
+  } catch (err) {
+    showProgress("분석 실패: " + err.message, 100);
+  } finally {
+    state.analyzing = false;
+  }
+});
+
+$("lib-search").addEventListener("input", (e) => {
+  state.query = e.target.value;
+  renderLibrary();
+});
+$("lib-sort").addEventListener("change", (e) => {
+  state.sort = e.target.value;
+  renderLibrary();
+});
+
+/* ── export / import library ── */
+$("export-btn").addEventListener("click", () => {
+  if (!state.reports.length) return;
+  const payload = { app: "technique_studio", version: 1, exportedAt: new Date().toISOString(), reports: state.reports };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `technique-studio-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+$("import-btn").addEventListener("click", () => $("import-input").click());
+$("import-input").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    const incoming = Array.isArray(parsed) ? parsed : parsed.reports;
+    if (!Array.isArray(incoming)) throw new Error("형식이 올바르지 않습니다");
+    const known = new Set(state.reports.map((r) => r.id));
+    let added = 0;
+    for (const r of incoming) {
+      if (!r || !r.id || !Array.isArray(r.scenes)) continue;
+      if (known.has(r.id)) continue;
+      state.reports.push(r);
+      known.add(r.id);
+      added++;
+    }
+    saveReports();
+    renderLibrary();
+    renderInsights();
+    showProgress(added ? `${added}개 리포트를 가져왔습니다` : "새로 추가된 리포트가 없습니다", 100);
+  } catch (err) {
+    showProgress("가져오기 실패: " + err.message, 100);
+  }
+});
+
+deepBtn.addEventListener("click", async () => {
+  const report = activeReport();
+  const file = state.files[state.activeId];
+  if (!report || !file || state.analyzing) return;
+  state.analyzing = true;
+  deepBtn.disabled = true;
+  try {
+    await deepScan(file, report, showProgress);
+    showProgress("정밀 분석 완료", 100);
+    saveReports();
+    selectReport(report.id);
+  } catch (err) {
+    showProgress("정밀 분석 실패: " + err.message, 100);
+    deepBtn.disabled = false;
+  } finally {
+    state.analyzing = false;
+  }
+});
+
+renderLibrary();
+renderInsights();
+</script>
