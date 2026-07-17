@@ -487,6 +487,27 @@
   }
   .guide a { color: var(--gold); }
 
+  .trend-controls { display: flex; gap: 6px; margin: 10px 0 8px; }
+  .trend-q { flex: 1; }
+  .trend-opts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .trend-opts label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--dim);
+    font-weight: 700;
+  }
+  .trend-opts .lib-sort { padding: 5px 7px; }
+  #trend-chips { margin-bottom: 10px; }
+
   .trend-note { font-size: 11px; color: var(--dim); line-height: 1.7; margin-bottom: 6px; }
 
   .trend-item {
@@ -571,14 +592,7 @@
 <div class="modal-wrap" id="trend-modal" role="dialog" aria-modal="true" aria-label="트렌딩 쇼츠">
   <div class="modal">
     <div class="modal-head">
-      <div class="modal-title">🔥 지금 뜨는 쇼츠</div>
-      <select class="lib-sort" id="trend-region" aria-label="국가">
-        <option value="KR">한국</option>
-        <option value="US">미국</option>
-        <option value="JP">일본</option>
-        <option value="GB">영국</option>
-      </select>
-      <button class="ghost-btn" id="trend-refresh" style="flex:0 0 auto">새로고침</button>
+      <div class="modal-title">🔥 주제별 인기 쇼츠</div>
       <button class="modal-close" id="trend-close" aria-label="닫기">✕</button>
     </div>
     <div class="modal-body">
@@ -592,10 +606,41 @@
           <li><a href="https://console.cloud.google.com" target="_blank" rel="noopener">console.cloud.google.com</a>에 구글 계정으로 로그인</li>
           <li>상단의 프로젝트 선택 → <b>새 프로젝트</b> → 이름은 아무거나 → 만들기</li>
           <li>왼쪽 메뉴 <b>API 및 서비스 → 라이브러리</b> → "YouTube Data API v3" 검색 → <b>사용</b> 버튼</li>
-          <li><b>API 및 서비스 → 사용자 인증 정보</b> → 사용자 인증 정보 만들기 → <b>API 키</b></li>
+          <li><b>API 및 서비스 → 사용자 인증 정보</b> → 사용자 인증 정보 만들기 → <b>API 키</b> → <b>공개 데이터</b></li>
           <li>만들어진 키를 복사해서 위 칸에 붙여넣고 저장 — 키는 이 브라우저에만 저장됩니다</li>
         </ol>
       </details>
+
+      <div class="trend-controls">
+        <input class="key-input trend-q" id="trend-q" placeholder="주제 키워드 (예: 요리, 댄스, 브이로그)" autocomplete="off" style="font-family:inherit">
+        <button class="add-btn" id="trend-search" style="flex:0 0 auto">검색</button>
+      </div>
+      <div class="chips" id="trend-chips"></div>
+      <div class="trend-opts">
+        <label>국가
+          <select class="lib-sort" id="trend-region" aria-label="국가">
+            <option value="KR">한국</option>
+            <option value="US">미국</option>
+            <option value="JP">일본</option>
+            <option value="GB">영국</option>
+          </select>
+        </label>
+        <label>기간
+          <select class="lib-sort" id="trend-window" aria-label="기간">
+            <option value="7">최근 7일</option>
+            <option value="30">최근 30일</option>
+            <option value="1">최근 24시간</option>
+          </select>
+        </label>
+        <label>길이
+          <select class="lib-sort" id="trend-dur" aria-label="길이">
+            <option value="60">60초 이하</option>
+            <option value="90">90초 이하</option>
+            <option value="180">3분 이하</option>
+          </select>
+        </label>
+      </div>
+
       <div class="trend-note" id="trend-note"></div>
       <div id="trend-list"></div>
     </div>
@@ -1358,11 +1403,19 @@ deepBtn.addEventListener("click", async () => {
   }
 });
 
-/* ═══════════════ trending shorts (YouTube Data API) ═══════════════ */
+/* ═══════════════ 주제별 인기 쇼츠 (YouTube Data API) ═══════════════ */
 
 const YT_KEY_STORE = "technique_studio_yt_key";
 const YT_REGION_STORE = "technique_studio_yt_region";
-const SHORTS_MAX_S = 181;   // 쇼츠 기준: 3분 이하
+const YT_Q_STORE = "technique_studio_yt_query";
+
+// 지역 → { 언어, 추천 키워드 } — 지역 필터보다 키워드 언어가 결과를 좌우한다
+const REGION_CFG = {
+  KR: { lang: "ko", chips: ["요리", "댄스", "브이로그", "메이크업", "챌린지", "ASMR", "반려동물", "운동", "패션"] },
+  US: { lang: "en", chips: ["cooking", "dance", "vlog", "makeup", "challenge", "ASMR", "pets", "fashion", "diy"] },
+  JP: { lang: "ja", chips: ["料理", "ダンス", "vlog", "メイク", "ASMR", "ペット", "ファッション"] },
+  GB: { lang: "en", chips: ["cooking", "dance", "vlog", "makeup", "challenge", "ASMR", "pets", "fashion"] },
+};
 
 function isoDurToSeconds(iso) {
   const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || "");
@@ -1378,102 +1431,159 @@ function fmtViews(n) {
   return n.toLocaleString();
 }
 
+function daysAgoISO(days) {
+  return new Date(Date.now() - days * 86400000).toISOString();
+}
+
 const trendModal = $("trend-modal"), trendList = $("trend-list"), trendNote = $("trend-note");
 const ytKeyInput = $("yt-key"), trendRegion = $("trend-region");
+const trendQ = $("trend-q"), trendWindow = $("trend-window"), trendDur = $("trend-dur"), trendChips = $("trend-chips");
+let trendLoading = false;
+
+function renderChips() {
+  const cfg = REGION_CFG[trendRegion.value] || REGION_CFG.KR;
+  trendChips.innerHTML = cfg.chips.map((c) => `<button class="chip" data-q="${esc(c)}">${esc(c)}</button>`).join("");
+}
 
 function openTrending() {
   trendModal.classList.add("open");
   const key = localStorage.getItem(YT_KEY_STORE) || "";
   ytKeyInput.value = key;
   trendRegion.value = localStorage.getItem(YT_REGION_STORE) || "KR";
+  trendQ.value = localStorage.getItem(YT_Q_STORE) || "";
+  renderChips();
   if (key) {
     $("key-guide").open = false;
-    loadTrending();
+    trendNote.textContent = "연구할 주제 키워드를 입력하거나 아래 추천 주제를 눌러보세요. 최근 급상승 쇼츠를 조회수순으로 보여줍니다.";
   } else {
     $("key-guide").open = true;
-    trendNote.textContent = "API 키를 저장하면 지금 뜨는 쇼츠 목록이 자동으로 나타납니다.";
+    trendNote.textContent = "먼저 무료 API 키를 발급해 저장하면 주제별 인기 쇼츠를 모아볼 수 있습니다.";
   }
 }
 
 function closeTrending() { trendModal.classList.remove("open"); }
 
-async function loadTrending() {
-  const key = localStorage.getItem(YT_KEY_STORE);
-  if (!key) { trendNote.textContent = "먼저 API 키를 저장해 주세요."; return; }
-  const region = trendRegion.value;
-  localStorage.setItem(YT_REGION_STORE, region);
-  trendList.innerHTML = "";
-  trendNote.textContent = "트렌딩 목록을 불러오는 중…";
+async function ytGet(path, params, key) {
+  params.key = key;
+  const qs = Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+  const res = await fetch(`https://www.googleapis.com/youtube/v3/${path}?${qs}`);
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = (data && data.error && data.error.message) || res.status;
+    const err = new Error(msg);
+    err.reason = data && data.error && data.error.errors && data.error.errors[0] && data.error.errors[0].reason;
+    throw err;
+  }
+  return data;
+}
 
-  let data;
+async function loadTrending() {
+  if (trendLoading) return;
+  const key = localStorage.getItem(YT_KEY_STORE);
+  if (!key) { trendNote.textContent = "먼저 API 키를 저장해 주세요."; $("key-guide").open = true; return; }
+  const q = trendQ.value.trim();
+  if (!q) { trendNote.textContent = "주제 키워드를 입력해 주세요 (예: 요리, 댄스)."; return; }
+
+  const region = trendRegion.value;
+  const cfg = REGION_CFG[region] || REGION_CFG.KR;
+  const days = +trendWindow.value || 7;
+  const maxDur = +trendDur.value || 90;
+  localStorage.setItem(YT_REGION_STORE, region);
+  localStorage.setItem(YT_Q_STORE, q);
+
+  trendLoading = true;
+  trendList.innerHTML = "";
+  trendNote.textContent = `"${q}" 인기 쇼츠를 찾는 중…`;
+
   try {
-    const url = "https://www.googleapis.com/youtube/v3/videos"
-      + "?part=snippet,contentDetails,statistics&chart=mostPopular"
-      + "&regionCode=" + encodeURIComponent(region)
-      + "&maxResults=50&key=" + encodeURIComponent(key);
-    const res = await fetch(url);
-    data = await res.json();
-    if (!res.ok) {
-      const msg = data && data.error && data.error.message || res.status;
-      trendNote.textContent = /key|credential|permission/i.test(String(msg))
-        ? "API 키가 올바르지 않거나 YouTube Data API v3가 아직 '사용' 설정되지 않았습니다. 발급 방법 3번 단계를 확인해 주세요."
-        : "불러오기 실패: " + msg;
+    // 1단계: 최근 + 짧은 영상 + 조회수순 검색 → 영상 id 수집
+    const search = await ytGet("search", {
+      part: "snippet", type: "video", videoDuration: "short", order: "viewCount",
+      publishedAfter: daysAgoISO(days), regionCode: region, relevanceLanguage: cfg.lang,
+      q, maxResults: 50,
+    }, key);
+    const ids = (search.items || []).map((it) => it.id && it.id.videoId).filter(Boolean);
+    if (!ids.length) {
+      trendNote.textContent = `"${q}" 관련 쇼츠를 찾지 못했습니다. 다른 키워드나 더 긴 기간을 시도해 보세요.`;
       return;
     }
+    // 2단계: 길이·조회수 등 상세 조회
+    const detail = await ytGet("videos", {
+      part: "snippet,contentDetails,statistics", id: ids.join(","),
+    }, key);
+
+    const rows = (detail.items || [])
+      .map((v) => ({ v, secs: isoDurToSeconds(v.contentDetails && v.contentDetails.duration),
+                     views: +((v.statistics && v.statistics.viewCount) || 0) }))
+      .filter((r) => r.secs > 0 && r.secs <= maxDur)
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 30);
+
+    if (!rows.length) {
+      trendNote.textContent = `"${q}" 결과는 있으나 ${maxDur}초 이하 쇼츠가 없습니다. '길이'를 늘려 보세요.`;
+      return;
+    }
+
+    trendNote.textContent = `"${q}" · 최근 ${days}일 · ${maxDur}초 이하 인기 쇼츠 ${rows.length}개 (조회수순). `
+      + "'열기'로 확인하고, 분석할 영상은 mp4로 저장한 뒤 '+ 영상 추가'로 넣어주세요.";
+
+    trendList.innerHTML = rows.map(({ v, secs, views }, i) => {
+      const sn = v.snippet || {};
+      const thumb = sn.thumbnails && (sn.thumbnails.medium || sn.thumbnails.default);
+      const pub = (sn.publishedAt || "").slice(0, 10);
+      return `
+        <div class="trend-item">
+          <span class="trend-rank">${i + 1}</span>
+          ${thumb ? `<img class="trend-thumb" src="${esc(thumb.url)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '<div class="trend-thumb"></div>'}
+          <div class="trend-meta">
+            <div class="trend-title">${esc(sn.title || "")}</div>
+            <div class="trend-sub">${esc(sn.channelTitle || "")} · 조회 ${fmtViews(views)} · ${fmt(secs * 1000)} · ${esc(pub)}</div>
+          </div>
+          <a class="trend-open" href="https://www.youtube.com/watch?v=${esc(v.id)}" target="_blank" rel="noopener">열기 ↗</a>
+        </div>`;
+    }).join("");
   } catch (err) {
-    trendNote.textContent = location.protocol === "file:"
-      ? "네트워크에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요."
-      : "이 페이지(아티팩트)에서는 보안 정책상 외부 접속이 차단됩니다. index.html 파일을 저장해서 열면 트렌딩 수집이 동작합니다.";
-    return;
+    if (err.message === "Failed to fetch" || err.name === "TypeError") {
+      trendNote.textContent = location.protocol === "file:"
+        ? "네트워크에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요."
+        : "이 페이지(아티팩트/미리보기)에서는 보안 정책상 외부 접속이 차단됩니다. index.html 파일을 저장해서 열면 동작합니다.";
+    } else if (/quota/i.test(String(err.message)) || err.reason === "quotaExceeded") {
+      trendNote.textContent = "오늘의 무료 검색 할당량을 모두 사용했습니다 (하루 약 100회). 내일 다시 초기화됩니다.";
+    } else if (/API key|credential|not valid|forbidden/i.test(String(err.message)) || err.reason === "keyInvalid") {
+      trendNote.textContent = "API 키가 올바르지 않거나 YouTube Data API v3가 '사용' 설정되지 않았습니다. 발급 방법 3~4번을 확인해 주세요.";
+    } else {
+      trendNote.textContent = "불러오기 실패: " + err.message;
+    }
+  } finally {
+    trendLoading = false;
   }
-
-  const items = (data.items || [])
-    .filter((v) => {
-      const s = isoDurToSeconds(v.contentDetails && v.contentDetails.duration);
-      return s > 0 && s <= SHORTS_MAX_S;
-    })
-    .slice(0, 30);
-
-  if (!items.length) {
-    trendNote.textContent = "지금 트렌딩 차트에 3분 이하 쇼츠가 없습니다. 다른 국가를 선택해 보세요.";
-    return;
-  }
-
-  trendNote.textContent = `트렌딩 차트에서 쇼츠 ${items.length}개를 찾았습니다. `
-    + "'열기'로 확인하고, 분석할 영상은 mp4 파일로 저장한 뒤 '+ 영상 추가'로 넣어주세요.";
-
-  trendList.innerHTML = items.map((v, i) => {
-    const sn = v.snippet || {};
-    const thumb = sn.thumbnails && (sn.thumbnails.medium || sn.thumbnails.default);
-    const secs = isoDurToSeconds(v.contentDetails.duration);
-    const views = fmtViews(v.statistics && v.statistics.viewCount);
-    return `
-      <div class="trend-item">
-        <span class="trend-rank">${i + 1}</span>
-        ${thumb ? `<img class="trend-thumb" src="${esc(thumb.url)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '<div class="trend-thumb"></div>'}
-        <div class="trend-meta">
-          <div class="trend-title">${esc(sn.title || "")}</div>
-          <div class="trend-sub">${esc(sn.channelTitle || "")} · 조회 ${views} · ${fmt(secs * 1000)}</div>
-        </div>
-        <a class="trend-open" href="https://www.youtube.com/watch?v=${esc(v.id)}" target="_blank" rel="noopener">열기 ↗</a>
-      </div>`;
-  }).join("");
 }
 
 $("trend-btn").addEventListener("click", openTrending);
 $("trend-close").addEventListener("click", closeTrending);
 trendModal.addEventListener("click", (e) => { if (e.target === trendModal) closeTrending(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTrending(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && trendModal.classList.contains("open")) closeTrending(); });
+
 $("yt-key-save").addEventListener("click", () => {
   const key = ytKeyInput.value.trim();
   if (!key) { trendNote.textContent = "키를 붙여넣은 뒤 저장을 눌러주세요."; return; }
   localStorage.setItem(YT_KEY_STORE, key);
   $("key-guide").open = false;
-  loadTrending();
+  trendNote.textContent = "키가 저장됐습니다. 주제 키워드를 입력하거나 추천 주제를 눌러보세요.";
 });
 ytKeyInput.addEventListener("keydown", (e) => { if (e.key === "Enter") $("yt-key-save").click(); });
-$("trend-refresh").addEventListener("click", loadTrending);
-trendRegion.addEventListener("change", loadTrending);
+
+$("trend-search").addEventListener("click", loadTrending);
+trendQ.addEventListener("keydown", (e) => { if (e.key === "Enter") loadTrending(); });
+trendChips.addEventListener("click", (e) => {
+  const q = e.target.dataset && e.target.dataset.q;
+  if (!q) return;
+  trendQ.value = q;
+  loadTrending();
+});
+trendRegion.addEventListener("change", () => { renderChips(); if (trendQ.value.trim()) loadTrending(); });
+trendWindow.addEventListener("change", () => { if (trendQ.value.trim()) loadTrending(); });
+trendDur.addEventListener("change", () => { if (trendQ.value.trim()) loadTrending(); });
 
 renderLibrary();
 renderInsights();
