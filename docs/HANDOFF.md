@@ -3,7 +3,7 @@
 새 세션에서 이 문서와 `docs/PRD.md`를 먼저 읽으면 전체 맥락을 파악할 수 있다.
 
 - **최종 업데이트**: 2026-07-17
-- **작업 브랜치**: `claude/image-video-analysis-wq8xby`
+- **작업 브랜치**: `claude/session-irb145` (이전: `claude/image-video-analysis-wq8xby` — 동일 내용에서 이어짐)
 
 ## 1. 프로젝트가 뭔가
 
@@ -32,7 +32,7 @@
 | `backend/` | 의존성 제로 M1 서버 (stdlib http.server + sqlite3). 업로드→MP4 구조 파싱→장면 분할→통계 API. Range 재생 지원 | 완료·동작 검증됨 |
 | `backend/mp4_probe.py` | 순수 Python MP4 박스 파서 — ffmpeg 없이 키프레임(stss) 경계로 장면 분할 | 완료 |
 | `frontend/` | 3단 레이아웃 웹 UI (서버용) | 완료 |
-| `web/index.html` | **단일 파일 스탠드얼론 버전** — 서버·설치 없이 브라우저만으로 동작. JS로 MP4 파싱, Canvas로 실제 프레임 썸네일·k-means 팔레트·프레임diff 정밀 컷 감지·첫1초 훅 지표, localStorage 저장 | 완료·파서 검증됨 |
+| `web/index.html` | **단일 파일 스탠드얼론 버전** — 서버·설치 없이 브라우저만으로 동작. JS로 MP4 파싱, Canvas로 실제 프레임 썸네일·k-means 팔레트·프레임diff 정밀 컷 감지·첫1초 훅 지표, localStorage 저장. **M4 추가**: 라이브러리 검색(이름·태그)·정렬(최신/컷빈도/길이/이름)·크로스영상 인사이트(평균 컷빈도·샷길이·훅 유형 분포 막대)·JSON 내보내기/가져오기 | 완료·파서+M4 UI 검증됨 |
 | `presets/viral_grammar.json` | 파일럿 주제 분석 스키마 | 완료 |
 
 검증된 사실: 샘플 영상(69.5s, 2252×1044, H.264)에서 Python·JS 파서 모두 동일하게
@@ -60,10 +60,12 @@
    게시 (직전 세션에서 아티팩트 게시를 사용자가 한 번 거부했음 — 의사 먼저 확인).
 2. **M2 — 분석 정밀화**: 네트워크가 열렸으면 ffmpeg + PySceneDetect 설치 후
    `backend/analyzer.py` 교체 (구조는 교체 전제로 설계돼 있음). 오디오 싱크 점수,
-   자막 영역 감지 추가.
+   자막 영역 감지 추가. **(이 세션에서도 pip/ffmpeg/yt-dlp 전부 여전히 차단됨 — 미착수)**
 3. **M3 — 전자동 파이프라인**: YouTube Data API 수집기(사용자 API 키 발급 안내 필요),
-   yt-dlp Fetcher(`fetch_mode` 스위치), 정리기(원본 삭제), 스케줄러.
-4. **M4 — 라이브러리 UX**: 검색/필터/정렬/태그 모아보기.
+   yt-dlp Fetcher(`fetch_mode` 스위치), 정리기(원본 삭제), 스케줄러. **(네트워크 차단으로 대기)**
+4. ✅ **M4 — 라이브러리 UX**: 검색·정렬·크로스영상 인사이트·JSON 내보내기/가져오기
+   `web/index.html`에 구현·브라우저 검증 완료. 남은 것: 서버 버전(`frontend/`)에도 동일 UX
+   반영, 태그별 장면 모아보기(필터 심화).
 5. **M5 — Runway 프리셋**: `presets/runway_studio.json` 추가 + 주제 스위처 활성화.
 
 ## 6. 실행 방법
