@@ -566,6 +566,20 @@
   }
   .trend-open:hover { background: rgba(242, 193, 78, 0.1); }
   .trend-open:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .trend-dl {
+    flex: 0 0 auto;
+    background: var(--gold);
+    color: #1a1405;
+    border: 0;
+    border-radius: 6px;
+    padding: 6px 11px;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .trend-dl:hover { background: #ffd066; }
+  .trend-dl:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
   /* ── responsive ──────────────────────────── */
   @media (max-width: 960px) {
@@ -582,7 +596,7 @@
 </style>
 
 <header class="topbar">
-  <div class="brand"><span class="clap">▚</span>TECHNIQUE STUDIO <span style="color:var(--dim);font-weight:600;letter-spacing:0;font-size:11px">v0.4</span></div>
+  <div class="brand"><span class="clap">▚</span>TECHNIQUE STUDIO <span style="color:var(--dim);font-weight:600;letter-spacing:0;font-size:11px">v0.5</span></div>
   <div class="preset-chip">VIRAL GRAMMAR</div>
   <button class="trend-btn" id="trend-btn">🔥 트렌딩</button>
   <button class="add-btn" id="add-btn">+ 영상 추가</button>
@@ -660,7 +674,8 @@
       </select>
     </div>
     <div id="lib-list"></div>
-    <div class="lib-footer">
+    <div class="lib-footer" style="flex-wrap:wrap">
+      <button class="ghost-btn" id="folder-btn" style="flex:1 1 100%">📁 쇼츠 폴더 연결</button>
       <button class="ghost-btn" id="export-btn">↓ 내보내기</button>
       <button class="ghost-btn" id="import-btn">↑ 가져오기</button>
       <input type="file" id="import-input" accept="application/json,.json" hidden>
@@ -1036,6 +1051,7 @@ const state = {
   analyzing: false,
   query: "",
   sort: "recent",
+  dirHandle: null,  // 쇼츠 폴더 자동 감시용 (File System Access API)
 };
 
 const $ = (id) => document.getElementById(id);
@@ -1525,7 +1541,7 @@ async function loadTrending() {
     }
 
     trendNote.textContent = `"${q}" · 최근 ${days}일 · ${maxDur}초 이하 인기 쇼츠 ${rows.length}개 (조회수순). `
-      + "'열기'로 확인하고, 분석할 영상은 mp4로 저장한 뒤 '+ 영상 추가'로 넣어주세요.";
+      + "'⬇ 받기'를 누르면 자동으로 내려받습니다 (폴더가 연결돼 있으면 분석까지 자동).";
 
     trendList.innerHTML = rows.map(({ v, secs, views }, i) => {
       const sn = v.snippet || {};
@@ -1539,6 +1555,7 @@ async function loadTrending() {
             <div class="trend-title">${esc(sn.title || "")}</div>
             <div class="trend-sub">${esc(sn.channelTitle || "")} · 조회 ${fmtViews(views)} · ${fmt(secs * 1000)} · ${esc(pub)}</div>
           </div>
+          <button class="trend-dl" data-vid="${esc(v.id)}">⬇ 받기</button>
           <a class="trend-open" href="https://www.youtube.com/watch?v=${esc(v.id)}" target="_blank" rel="noopener">열기 ↗</a>
         </div>`;
     }).join("");
@@ -1558,6 +1575,121 @@ async function loadTrending() {
     trendLoading = false;
   }
 }
+
+/* ═══════════════ 원클릭 자동화: ⬇받기(프로토콜) + 폴더 자동 감시 ═══════════════ */
+
+function idbOpen() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("technique_studio", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("kv");
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbSet(k, v) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction("kv", "readwrite");
+    tx.objectStore("kv").put(v, k);
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function idbGet(k) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction("kv");
+    const rq = tx.objectStore("kv").get(k);
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+
+let watchTimer = null;
+
+async function updateFolderBtn() {
+  const btn = $("folder-btn");
+  if (!window.showDirectoryPicker) { btn.style.display = "none"; return; }
+  if (!state.dirHandle) { btn.textContent = "📁 쇼츠 폴더 연결 (자동 분석)"; return; }
+  try {
+    const p = await state.dirHandle.queryPermission({ mode: "read" });
+    btn.textContent = p === "granted" ? "📁 폴더 자동 감시 중 ✓" : "📁 폴더 접근 다시 허용 (클릭)";
+  } catch (e) { btn.textContent = "📁 쇼츠 폴더 연결 (자동 분석)"; }
+}
+
+async function scanFolder() {
+  if (!state.dirHandle || state.analyzing) return;
+  try {
+    if (await state.dirHandle.queryPermission({ mode: "read" }) !== "granted") { updateFolderBtn(); return; }
+    for await (const entry of state.dirHandle.values()) {
+      if (entry.kind !== "file" || !/\.(mp4|m4v|mov|webm)$/i.test(entry.name)) continue;
+      const f = await entry.getFile();
+      if (state.reports.some((r) => r.name === f.name && r.size === f.size)) continue;
+      state.analyzing = true;
+      try {
+        const report = await analyzeFile(f, showProgress);
+        state.files[report.id] = f;
+        state.reports.push(report);
+        saveReports();
+        selectReport(report.id);
+      } catch (e) {
+        showProgress("자동 분석 실패(" + f.name + "): " + e.message, 100);
+      } finally {
+        state.analyzing = false;
+      }
+      break;  // 한 번에 하나씩 — 다음 파일은 다음 스캔에서
+    }
+  } catch (e) { /* 폴더가 삭제/이동된 경우 등 */ }
+}
+
+function startWatching() {
+  if (watchTimer) clearInterval(watchTimer);
+  watchTimer = setInterval(scanFolder, 5000);
+}
+
+$("folder-btn").addEventListener("click", async () => {
+  if (!window.showDirectoryPicker) return;
+  try {
+    if (state.dirHandle) {
+      const p = await state.dirHandle.queryPermission({ mode: "read" });
+      if (p === "prompt") {
+        if (await state.dirHandle.requestPermission({ mode: "read" }) === "granted") {
+          updateFolderBtn(); startWatching(); scanFolder(); return;
+        }
+      }
+    }
+    const h = await showDirectoryPicker({ id: "shorts", mode: "read" });
+    state.dirHandle = h;
+    try { await idbSet("dirHandle", h); } catch (e) {}
+    updateFolderBtn();
+    startWatching();
+    scanFolder();
+    showProgress("폴더 연결 완료 — 새 영상이 저장되면 자동으로 분석합니다", 100);
+  } catch (e) { /* 사용자가 선택 취소 */ }
+});
+
+window.addEventListener("focus", () => scanFolder());
+
+(async () => {
+  try { state.dirHandle = (await idbGet("dirHandle")) || null; } catch (e) { state.dirHandle = null; }
+  updateFolderBtn();
+  if (state.dirHandle) startWatching();
+})();
+
+function startProtocolDownload(vid) {
+  const url = "https://www.youtube.com/watch?v=" + vid;
+  location.href = "techniqueshorts://" + encodeURIComponent(url);
+  const connected = !!state.dirHandle;
+  trendNote.textContent = "다운로드 창이 뜹니다. 처음이라면 브라우저 확인창에서 '열기'를 눌러주세요. "
+    + (connected ? "완료되면 자동으로 분석됩니다."
+                 : "왼쪽 아래 '📁 쇼츠 폴더 연결'을 해두면 분석까지 자동입니다.")
+    + " (아무 반응이 없으면 쇼츠받기 프로그램을 한 번 실행해 연결을 등록하세요)";
+}
+
+trendList.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest(".trend-dl");
+  if (b) startProtocolDownload(b.dataset.vid);
+});
 
 $("trend-btn").addEventListener("click", openTrending);
 $("trend-close").addEventListener("click", closeTrending);

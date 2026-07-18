@@ -25,7 +25,7 @@
   a { color:#f2c14e; }
 </style>
 <script language="javascript">
-var sh = null, fso = null, base = "", timer = null, before = {}, waited = 0;
+var sh = null, fso = null, base = "", timer = null, before = {}, waited = 0, isAuto = false;
 
 function init() {
   window.resizeTo(600, 340);
@@ -37,6 +37,21 @@ function init() {
     return;
   }
   base = getBase();
+  registerProtocol();
+
+  var arg = getArg();
+  if (arg && /^techniqueshorts:/i.test(arg)) {
+    var url = "";
+    try { url = decodeURIComponent(arg.replace(/^techniqueshorts:\/*/i, "").replace(/\/+$/, "")); } catch (e) {}
+    if (url) {
+      isAuto = true;
+      document.getElementById("url").value = url;
+      setStatus("<b>앱에서 받은 링크</b>로 자동 다운로드를 시작합니다…");
+      window.setTimeout(function () { download(); }, 400);
+      return;
+    }
+  }
+
   try {
     var clip = window.clipboardData.getData("Text");
     if (clip && /^https?:\/\/[^ ]*(youtube\.com|youtu\.be)/i.test(clip)) {
@@ -51,10 +66,35 @@ function init() {
   }
 }
 
-function getBase() {
+function registerProtocol() {
+  // 앱의 [⬇ 받기] 버튼이 이 프로그램을 부를 수 있게 연결 등록 (사용자 계정에만, 관리자 권한 불필요)
+  try {
+    var self = getSelfPath();
+    sh.RegWrite("HKCU\\Software\\Classes\\techniqueshorts\\", "URL:Technique Studio 쇼츠 받기", "REG_SZ");
+    sh.RegWrite("HKCU\\Software\\Classes\\techniqueshorts\\URL Protocol", "", "REG_SZ");
+    sh.RegWrite("HKCU\\Software\\Classes\\techniqueshorts\\shell\\open\\command\\",
+      'mshta.exe "' + self + '" "%1"', "REG_SZ");
+  } catch (e) {}
+}
+
+function getSelfPath() {
   var cl = htaApp.commandLine;
-  var p = cl.charAt(0) === '"' ? cl.split('"')[1] : cl;
+  return cl.charAt(0) === '"' ? cl.split('"')[1] : cl.split(" ")[0];
+}
+
+function getBase() {
+  var p = getSelfPath();
   return p.substring(0, p.lastIndexOf("\\"));
+}
+
+function getArg() {
+  var cl = htaApp.commandLine;
+  var parts = cl.split('"');
+  for (var i = 3; i < parts.length; i += 2) {
+    var t = parts[i];
+    if (t && t.replace(/\s/g, "").length) return t;
+  }
+  return "";
 }
 
 function getEngine() {
@@ -104,8 +144,13 @@ function check() {
       window.clearInterval(timer);
       document.getElementById("dlBtn").disabled = false;
       document.getElementById("url").value = "";
-      setStatus("<b>완료!</b> 저장됨: " + n + "<br>앱의 <b>+ 영상 추가</b>에서 이 파일을 선택하면 분석이 시작됩니다.");
-      sh.Run('explorer "' + dir + '"');
+      if (isAuto) {
+        setStatus("<b>완료!</b> " + n + "<br>앱이 폴더에 연결돼 있으면 곧 자동 분석됩니다. 이 창은 곧 닫힙니다.");
+        window.setTimeout(function () { window.close(); }, 2500);
+      } else {
+        setStatus("<b>완료!</b> 저장됨: " + n + "<br>앱의 <b>+ 영상 추가</b>에서 이 파일을 선택하면 분석이 시작됩니다.");
+        sh.Run('explorer "' + dir + '"');
+      }
       return;
     }
   }
@@ -126,8 +171,8 @@ function openFolder() {
 </head>
 <body onload="init()">
   <div class="wrap">
-    <div class="brand"><span class="g">▚</span> TECHNIQUE STUDIO — 쇼츠 받기</div>
-    <div class="desc">유튜브 쇼츠 링크를 붙여넣고 다운로드를 누르면 ‘쇼츠’ 폴더에 mp4로 저장됩니다.<br>링크를 복사해 두고 이 프로그램을 열면 자동으로 붙여넣어집니다.</div>
+    <div class="brand"><span class="g">▚</span> TECHNIQUE STUDIO — 쇼츠 받기 <span style="color:#8d92a5;font-weight:normal;letter-spacing:0;font-size:10px">v2</span></div>
+    <div class="desc">앱의 [⬇ 받기] 버튼을 누르면 이 창이 자동으로 열려 내려받습니다.<br>직접 쓸 때는 링크를 붙여넣고 다운로드를 누르세요. 저장 위치는 ‘쇼츠’ 폴더.</div>
     <input id="url" type="text" spellcheck="false">
     <div class="row">
       <button id="dlBtn" onclick="download()">다운로드</button>
