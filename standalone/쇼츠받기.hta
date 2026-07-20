@@ -1,0 +1,184 @@
+﻿<!doctype html>
+<html>
+<head>
+<meta http-equiv="x-ua-compatible" content="IE=9">
+<meta charset="utf-8">
+<hta:application id="htaApp" applicationname="TechniqueShorts" border="thin"
+  maximizebutton="no" scroll="no" contextmenu="no" showintaskbar="yes" />
+<title>쇼츠 받기 — Technique Studio</title>
+<style>
+  body { margin:0; background:#0c0d12; color:#eceef6; font-family:"Malgun Gothic","Segoe UI",sans-serif; font-size:13px; }
+  .wrap { padding:18px 20px; }
+  .brand { font-weight:bold; letter-spacing:3px; font-size:12px; margin-bottom:4px; }
+  .brand .g { color:#f2c14e; }
+  .desc { color:#8d92a5; font-size:11px; margin-bottom:14px; line-height:1.6; }
+  #url { width:100%; background:#14161f; border:1px solid #272b3a; color:#eceef6;
+         font-size:12px; padding:9px 10px; font-family:Consolas,monospace; }
+  .row { margin-top:10px; }
+  button { background:#f2c14e; color:#1a1405; border:0; font-weight:bold; font-size:13px;
+           padding:9px 22px; cursor:pointer; font-family:inherit; }
+  button:disabled { background:#4a4a55; color:#8d92a5; }
+  #openBtn { background:transparent; color:#f2c14e; border:1px solid #c79a2e; margin-left:8px; }
+  #status { margin-top:14px; font-size:12px; color:#8d92a5; line-height:1.7; min-height:38px; }
+  #status b { color:#f2c14e; }
+  #status .err { color:#e05d5d; }
+  a { color:#f2c14e; }
+</style>
+<script language="javascript">
+var sh = null, fso = null, base = "", timer = null, before = {}, waited = 0, isAuto = false;
+
+function init() {
+  window.resizeTo(600, 340);
+  try {
+    sh = new ActiveXObject("WScript.Shell");
+    fso = new ActiveXObject("Scripting.FileSystemObject");
+  } catch (e) {
+    setStatus('<span class="err">이 컴퓨터에서 실행 구성요소를 사용할 수 없습니다.</span>');
+    return;
+  }
+  base = getBase();
+  registerProtocol();
+
+  var arg = getArg();
+  if (arg && /^techniqueshorts:/i.test(arg)) {
+    var url = "";
+    try { url = decodeURIComponent(arg.replace(/^techniqueshorts:\/*/i, "").replace(/\/+$/, "")); } catch (e) {}
+    if (url) {
+      isAuto = true;
+      document.getElementById("url").value = url;
+      setStatus("<b>앱에서 받은 링크</b>로 자동 다운로드를 시작합니다…");
+      window.setTimeout(function () { download(); }, 400);
+      return;
+    }
+  }
+
+  try {
+    var clip = window.clipboardData.getData("Text");
+    if (clip && /^https?:\/\/[^ ]*(youtube\.com|youtu\.be)/i.test(clip)) {
+      document.getElementById("url").value = clip;
+      setStatus("복사해 둔 링크를 자동으로 붙여넣었습니다. <b>다운로드</b>를 누르세요.");
+    }
+  } catch (e) {}
+  if (!fso.FileExists(base + "\\yt-dlp.exe")) {
+    setStatus('<span class="err">준비 필요(처음 한 번):</span> yt-dlp.exe가 이 폴더에 없습니다.<br>'
+      + '<a href="#" onclick="getEngine();return false;">여기를 누르면</a> 내려받기가 시작됩니다. '
+      + '받은 파일을 이 프로그램과 같은 폴더에 넣어주세요.');
+  }
+}
+
+function registerProtocol() {
+  // 앱의 [⬇ 받기] 버튼이 이 프로그램을 부를 수 있게 연결 등록 (사용자 계정에만, 관리자 권한 불필요)
+  try {
+    var self = getSelfPath();
+    sh.RegWrite("HKCU\\Software\\Classes\\techniqueshorts\\", "URL:Technique Studio 쇼츠 받기", "REG_SZ");
+    sh.RegWrite("HKCU\\Software\\Classes\\techniqueshorts\\URL Protocol", "", "REG_SZ");
+    sh.RegWrite("HKCU\\Software\\Classes\\techniqueshorts\\shell\\open\\command\\",
+      'mshta.exe "' + self + '" "%1"', "REG_SZ");
+  } catch (e) {}
+}
+
+function getSelfPath() {
+  var cl = htaApp.commandLine;
+  return cl.charAt(0) === '"' ? cl.split('"')[1] : cl.split(" ")[0];
+}
+
+function getBase() {
+  var p = getSelfPath();
+  return p.substring(0, p.lastIndexOf("\\"));
+}
+
+function getArg() {
+  var cl = htaApp.commandLine;
+  var parts = cl.split('"');
+  for (var i = 3; i < parts.length; i += 2) {
+    var t = parts[i];
+    if (t && t.replace(/\s/g, "").length) return t;
+  }
+  return "";
+}
+
+function getEngine() {
+  sh.Run("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe");
+}
+
+function setStatus(html) { document.getElementById("status").innerHTML = html; }
+
+function listDone(dir) {
+  var names = {};
+  if (!fso.FolderExists(dir)) return names;
+  var en = new Enumerator(fso.GetFolder(dir).Files);
+  for (; !en.atEnd(); en.moveNext()) {
+    var n = en.item().Name;
+    if (!/\.(part|ytdl|tmp)$/i.test(n)) names[n] = true;
+  }
+  return names;
+}
+
+function download() {
+  var url = document.getElementById("url").value.replace(/^\s+|\s+$/g, "").replace(/"/g, "");
+  if (!url) { setStatus('<span class="err">먼저 유튜브 링크를 붙여넣어 주세요.</span>'); return; }
+  if (!/^https?:\/\/[^ ]*(youtube\.com|youtu\.be)/i.test(url)) {
+    setStatus('<span class="err">유튜브 링크가 아닌 것 같습니다.</span> 주소를 다시 확인해 주세요.'); return;
+  }
+  if (!fso.FileExists(base + "\\yt-dlp.exe")) {
+    setStatus('<span class="err">yt-dlp.exe가 없습니다.</span> <a href="#" onclick="getEngine();return false;">여기를 눌러</a> 받은 뒤 같은 폴더에 넣어주세요.'); return;
+  }
+  var dir = base + "\\쇼츠";
+  before = listDone(dir);
+  var cmd = '"' + base + '\\yt-dlp.exe" --no-playlist -P "' + dir + '" -o "%(title).60s.%(ext)s" -f "b[ext=mp4]/b" "' + url + '"';
+  try { sh.Run(cmd, 0, false); } catch (e) {
+    setStatus('<span class="err">실행 실패:</span> ' + e.message); return;
+  }
+  document.getElementById("dlBtn").disabled = true;
+  waited = 0;
+  setStatus("<b>다운로드 중…</b> 잠시만 기다려 주세요.");
+  timer = window.setInterval(check, 2000);
+}
+
+function check() {
+  waited += 2;
+  var dir = base + "\\쇼츠";
+  var now = listDone(dir);
+  for (var n in now) {
+    if (!before[n]) {
+      window.clearInterval(timer);
+      document.getElementById("dlBtn").disabled = false;
+      document.getElementById("url").value = "";
+      if (isAuto) {
+        setStatus("<b>완료!</b> " + n + "<br>앱이 폴더에 연결돼 있으면 곧 자동 분석됩니다. 이 창은 곧 닫힙니다.");
+        window.setTimeout(function () { window.close(); }, 2500);
+      } else {
+        setStatus("<b>완료!</b> 저장됨: " + n + "<br>앱의 <b>+ 영상 추가</b>에서 이 파일을 선택하면 분석이 시작됩니다.");
+        sh.Run('explorer "' + dir + '"');
+      }
+      return;
+    }
+  }
+  if (waited === 20) setStatus("<b>다운로드 중…</b> 영상이 크면 조금 더 걸릴 수 있어요.");
+  if (waited >= 180) {
+    window.clearInterval(timer);
+    document.getElementById("dlBtn").disabled = false;
+    setStatus('<span class="err">3분이 지나도 완료되지 않았습니다.</span> 링크가 맞는지 확인하거나 다시 시도해 주세요.');
+  }
+}
+
+function openFolder() {
+  var dir = base + "\\쇼츠";
+  if (!fso.FolderExists(dir)) { setStatus("아직 받은 영상이 없습니다."); return; }
+  sh.Run('explorer "' + dir + '"');
+}
+</script>
+</head>
+<body onload="init()">
+  <div class="wrap">
+    <div class="brand"><span class="g">▚</span> TECHNIQUE STUDIO — 쇼츠 받기 <span style="color:#8d92a5;font-weight:normal;letter-spacing:0;font-size:10px">v2</span></div>
+    <div class="desc">앱의 [⬇ 받기] 버튼을 누르면 이 창이 자동으로 열려 내려받습니다.<br>직접 쓸 때는 링크를 붙여넣고 다운로드를 누르세요. 저장 위치는 ‘쇼츠’ 폴더.</div>
+    <input id="url" type="text" spellcheck="false">
+    <div class="row">
+      <button id="dlBtn" onclick="download()">다운로드</button>
+      <button id="openBtn" onclick="openFolder()">쇼츠 폴더 열기</button>
+    </div>
+    <div id="status"></div>
+  </div>
+</body>
+</html>

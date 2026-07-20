@@ -1,3 +1,7 @@
-data/
 *.db
+*.pyc
+Thumbs.db
 __pycache__/
+data/
+desktop.ini
+yt-dlp.exe
